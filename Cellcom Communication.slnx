@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="Cellcom Communication/Cellcom Communication.csproj" />
+  <Project Path="Client-Side/Client-Side.csproj" Id="f2b6f760-b8aa-41d4-98ad-1819f239bfeb" />
 </Solution>
