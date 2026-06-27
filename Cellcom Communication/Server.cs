@@ -40,8 +40,9 @@ namespace Cellcom_Communication
                 // attach event handler for data received on each port...
                 ports[i].DataReceived += ReadCommands;
 
-                Console.WriteLine("All ports have been initialized successfuly.");
+                Console.WriteLine($"Com port {ports[i].PortName} has been successfuly initialized.");
             }
+            Console.WriteLine();
         }
 
         public void OpenServer()
@@ -51,20 +52,22 @@ namespace Cellcom_Communication
                 try
                 {   // open each port for listening/writing...
                     ports[i].Open();
-                    DisplayIntroMessage(ports[i]);
+                    Console.WriteLine($"Com port {ports[i].PortName} has been successfuly opened.");
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"Error initializing {ports[i].PortName}: {e.Message}");
+                    Console.WriteLine($"Error openning {ports[i].PortName}: {e.Message}");
                 }
             }
-            Console.WriteLine("Cellcom Communication System is running. Press any key to exit...");
+            Console.WriteLine("\nCellcom Communication System is running. Press any key to exit...");
             Console.ReadLine();
         }
 
         private void ReadCommands(object sender, SerialDataReceivedEventArgs e)
         {
             SerialPort serialPort = (SerialPort)sender; // current active port
+
+            DisplayIntroMessage(serialPort); // display commands for an active user
 
             try
             {
