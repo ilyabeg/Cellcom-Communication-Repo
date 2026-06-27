@@ -9,33 +9,38 @@ namespace Client_Side
     {
         private static SerialPort[] availablePorts = new SerialPort[10]; // 10 global serial ports
 
-        public void Start()
+        public async Task Start()
         {
             InitPorts();
 
             Console.WriteLine("Select COM port (e.g. COM10, COM11, ... , COM19) >>");
-            string input = Console.ReadLine().Trim();
+            string input = Console.ReadLine().Trim().ToUpper();
 
             if (!isValid(input))
             {
                 do
                 {
                     Console.WriteLine("Invalid input. Please enter a valid COM port (e.g. COM10, COM11, ... , COM19) >>");
-                    input = Console.ReadLine().Trim();
+                    input = Console.ReadLine().Trim().ToUpper();
                 }
                 while (!isValid(input));
             }
 
-            OpenPort(input);
+            SerialPort openPort = OpenPort(input);
+            if (openPort == null)
+            {
+                Console.WriteLine("Couldn't find/open port. Exiting program...");
+                return;
+            }
+
+            await Task.Delay(100); // wait for port to open with "breathing air"
+            InputClientCommands(openPort);
         }
 
-        private void InputClientCommands(Object sender, SerialDataReceivedEventArgs e)
+        private void InputClientCommands(SerialPort serialPort)
         {
-            SerialPort serialPort = (SerialPort)sender; // current active port
-            serialPort.Write("#"); // random input to trigger event handler of the listening port to display commands for user
+            serialPort.WriteLine("#"); // random input to trigger event handler of the listening port to display commands for user
             string command;
-
-            Console.WriteLine("Type EXIT to stop...\n");
 
             bool _continue = true;
             while (_continue)
@@ -43,9 +48,8 @@ namespace Client_Side
                 command = Console.ReadLine();
                 serialPort.Write(command);
 
-                if (command == "EXIT") // if command is exit it is ok to send it first to close the listening port.
+                if (command == "EXIT") // if command is EXIT it is ok to send it first to close the listening port.
                 {
-                    _continue = false;
                     try
                     {
                         serialPort.Close();
@@ -55,6 +59,23 @@ namespace Client_Side
                     {
                         Console.WriteLine($"Error closing {serialPort.PortName}: {ex.Message}");
                     }
+                    _continue = false;
+                }
+
+                try
+                {
+                    string response = serialPort.ReadLine();
+                    Console.WriteLine("{SERVER}: " + response);
+                }
+                catch (TimeoutException)
+                {
+                    Console.WriteLine("Timeout Error. Please try again.");
+                    serialPort.DiscardInBuffer();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                    serialPort.DiscardInBuffer();
                 }
             }
         }
@@ -78,7 +99,7 @@ namespace Client_Side
             }
         }
 
-        private async Task OpenPort(string portName)
+        private SerialPort OpenPort(string portName)
         {
             for (int i = 0; i <= 9; i++)
             {
@@ -87,15 +108,16 @@ namespace Client_Side
                     try
                     {
                         availablePorts[i].Open();
-                        await Task.Delay(100); // wait for the port to open
                         Console.WriteLine($"Port {portName} opened successfully.");
+                        return availablePorts[i];
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine($"Error opening {portName}: {e.Message}");
+                        Console.WriteLine($"*Critical Error* opening {portName} failed: {e.Message}");
                     }
                 }
             }
+            return null; // return null if the port was not found or could not be opened
         }
 
         private bool isValid(string input)

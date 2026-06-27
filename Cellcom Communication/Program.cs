@@ -4,8 +4,11 @@ namespace Cellcom_Communication
 {
     internal class Program
     {
-        
-        // delete everything for future merging...
+        static void Main(string[] args)
+        {
+            
+            // delete everything for future merge...
 
+        }
     }
 }
