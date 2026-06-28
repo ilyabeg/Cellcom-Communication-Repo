@@ -9,7 +9,7 @@ namespace Client_Side
     {
         private static SerialPort[] availablePorts = new SerialPort[10]; // 10 global serial ports
 
-        public async Task Start()
+        public void Start()
         {
             InitPorts();
 
@@ -33,7 +33,6 @@ namespace Client_Side
                 return;
             }
 
-            await Task.Delay(100); // wait for port to open with "breathing air"
             InputClientCommands(openPort);
         }
 
@@ -65,7 +64,7 @@ namespace Client_Side
                 try
                 {
                     string response = serialPort.ReadLine();
-                    Console.WriteLine("{SERVER}: " + response);
+                    Console.WriteLine(response);
                 }
                 catch (TimeoutException)
                 {

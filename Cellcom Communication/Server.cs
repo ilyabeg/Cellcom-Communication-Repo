@@ -7,9 +7,9 @@ namespace Cellcom_Communication
 {
     internal class Server // Server class for handling all logic
     {
-        static SerialPort[] ports = new SerialPort[10]; // 10 global serial ports
-        static List<string> users = new List<string>(); // current cellcom users
-        static List<string> calls = new List<string>(); // current active calls by users
+        private static SerialPort[] ports = new SerialPort[10]; // 10 global serial ports
+        private static List<string> users = new List<string>(); // current cellcom users
+        private static List<string> calls = new List<string>(); // current active calls by users
 
         public void InitServer()
         {
@@ -59,15 +59,13 @@ namespace Cellcom_Communication
                     Console.WriteLine($"Error openning {ports[i].PortName}: {e.Message}");
                 }
             }
-            Console.WriteLine("\nCellcom Communication System is running. Press any key to exit...");
+            Console.WriteLine("\nCellcom Communication System is running. Press any key to exit...\n");
             Console.ReadLine();
         }
 
         private void ReadCommands(object sender, SerialDataReceivedEventArgs e)
         {
             SerialPort serialPort = (SerialPort)sender; // current active port
-
-            DisplayIntroMessage(serialPort); // display commands for an active user
 
             try
             {
@@ -82,13 +80,15 @@ namespace Cellcom_Communication
                 {
                     string userID = msg.Substring(idStart, idEnd - idStart);
                     string command = msg.Substring(idEnd + 1).Trim().ToUpper();
+                    Console.WriteLine($"Recieved command: '{command}' from <{userID}> on port {serialPort.PortName}.");
 
                     // determine which command has been read
                     DetermineCommand(serialPort, userID, command);
                 }
                 else
                 {
-                    serialPort.WriteLine("Invalid message format. Expected: '<userID> command'");
+                    serialPort.WriteLine("[SERVER]: Invalid message format. Expected: '<userID> command'");
+                    DisplayCommandsList(serialPort);
                 }
             }
             catch (TimeoutException ex)
@@ -121,11 +121,11 @@ namespace Cellcom_Communication
                     // safe exit
                     users.Remove(userID);
                     calls.Remove(userID);
-                    serialPort.Close();
+                    //serialPort.Close();
                     break;
 
                 default:
-                    serialPort.WriteLine(String.Format("<{0}> : '{1}' | Command not found.", userID, command));
+                    serialPort.WriteLine(String.Format("[SERVER]: <{0}> : '{1}' | Command not found.", userID, command));
                     break;
             }
         }
@@ -135,22 +135,22 @@ namespace Cellcom_Communication
             // using await for 10 second timer
             if (users.Contains(userID))
             {
-                serialPort.WriteLine($"<{userID}> already joined.");
+                serialPort.WriteLine($"[SERVER]: <{userID}> already joined.");
             }
             else if (users.Count >= 10)
             {
-                serialPort.WriteLine("*Error* | Maximum capacity of users reached.");
+                serialPort.WriteLine("[SERVER]: *Error* | Maximum capacity of users reached.");
             }
             else
             {
                 users.Add(userID);
-                serialPort.WriteLine(String.Format("<{0}> : {1} : JOINING CELLCOM ENTERPRISE...", userID, command));
+                serialPort.WriteLine(String.Format("[SERVER]: <{0}> : {1} : JOINING CELLCOM ENTERPRISE...", userID, command));
                 for (int i = 1; i <= 10; i++)
                 {
                     serialPort.Write(i + " ");
                     await Task.Delay(500); // simulate some work being done...
                 }
-                serialPort.WriteLine(String.Format("\r\n<{0}> : DONE", userID));
+                serialPort.WriteLine(String.Format("\r\n[SERVER]: <{0}> : DONE", userID));
             }
         }
 
@@ -166,18 +166,18 @@ namespace Cellcom_Communication
                     calls.Add(userID); // current user is in a call
                     while (calls.Contains(userID))
                     {
-                        serialPort.WriteLine(String.Format("<{0}> : CELLCOM", userID));
+                        serialPort.WriteLine(String.Format("[SERVER]: <{0}> : CELLCOM", userID));
                         await Task.Delay(1000); // delay one second...
                     }
                 }
                 else
                 {
-                    serialPort.WriteLine($"*Error* | user: <{userID}> is already in a call.");
+                    serialPort.WriteLine($"[SERVER]: *Error* | user: <{userID}> is already in a call.");
                 }
             }
             else
             {
-                serialPort.WriteLine("*Error* | User must JOIN before initiating a call.");
+                serialPort.WriteLine("[SERVER]: *Error* | User must JOIN before initiating a call.");
             }
         }
 
@@ -187,32 +187,30 @@ namespace Cellcom_Communication
             {
                 if (calls.Contains(userID))
                 {
-                    serialPort.WriteLine(String.Format("<{0}> : BYE.", userID));
+                    serialPort.WriteLine(String.Format("[SERVER]: <{0}> : BYE.", userID));
                     calls.Remove(userID); // close current call
                 }
                 else
                 {
-                    serialPort.WriteLine($"*Error* | user: <{userID}> is currently not in a call.");
+                    serialPort.WriteLine($"[SERVER]: *Error* | user: <{userID}> is currently not in a call.");
                 }
             }
             else
             {
-                serialPort.WriteLine("*Error* | User must JOIN before stopping a call.");
+                serialPort.WriteLine("[SERVER]: *Error* | User must JOIN before stopping a call.");
             }
         }
 
-        private void DisplayIntroMessage(SerialPort serialPort)
+        private void DisplayCommandsList(SerialPort serialPort)
         {
             // custom commands list
-            serialPort.WriteLine("=======================" +
-                "\r\nWelcome to the Terminal" +
-                "\r\n=======================" +
-                "\r\n\r\nList of all commands:" +
+            serialPort.WriteLine(
+                "\nList of all commands:" +
                 "\r\n\t* <'user.id'> JOIN -> join our network" +
                 "\r\n\t* <'user.id'> NEW  -> open a new call in our network (must join first)" +
                 "\r\n\t* <'user.id'> STOP -> stop an ongoing call (call must be open)" +
                 "\r\n\t* <'user.id'> EXIT -> exit the terminal" +
-                "\r\n\r\nawaiting user input ...\r\n\r\n");
+                "\r\n\r\nawaiting user input ...\r\n");
         }
     }
 }
