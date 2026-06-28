@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Text;
@@ -8,8 +9,10 @@ namespace Cellcom_Communication
     internal class Server // Server class for handling all logic
     {
         private static SerialPort[] ports = new SerialPort[10]; // 10 global serial ports
-        private static List<string> users = new List<string>(); // current cellcom users
-        private static List<string> calls = new List<string>(); // current active calls by users
+        private static ConcurrentDictionary<string, int> users = new ConcurrentDictionary<string, int>(); // current cellcom users
+        private static ConcurrentDictionary<string, int> calls = new ConcurrentDictionary<string, int>(); // current active calls by users
+        // שינוי הרשימות למבנה נתונים שתומך במערכת multi-thread...
+        // int value in the dictionaries is junk
 
         public void InitServer()
         {
@@ -106,22 +109,20 @@ namespace Cellcom_Communication
             switch (command)
             {
                 case "JOIN":
-                    JoinCellcom(serialPort, userID, command);
+                    JoinCellcom(serialPort, userID);
                     break;
 
                 case "NEW":
-                    InitiateCall(serialPort, userID, command);
+                    InitiateCall(serialPort, userID);
                     break;
 
                 case "STOP":
-                    CloseCall(serialPort, userID, command);
+                    CloseCall(serialPort, userID);
                     break;
 
                 case "EXIT":
                     // safe exit
-                    users.Remove(userID);
-                    calls.Remove(userID);
-                    //serialPort.Close();
+                    ExitCellcom(serialPort, userID);
                     break;
 
                 default:
@@ -130,10 +131,10 @@ namespace Cellcom_Communication
             }
         }
 
-        private async Task JoinCellcom(SerialPort serialPort, string userID, string command)
+        private async Task JoinCellcom(SerialPort serialPort, string userID)
         {
             // using await for 10 second timer
-            if (users.Contains(userID))
+            if (users.ContainsKey(userID))
             {
                 serialPort.WriteLine($"[SERVER]: <{userID}> already joined.");
             }
@@ -143,36 +144,48 @@ namespace Cellcom_Communication
             }
             else
             {
-                users.Add(userID);
-                serialPort.WriteLine(String.Format("[SERVER]: <{0}> : {1} : JOINING CELLCOM ENTERPRISE...", userID, command));
-                for (int i = 1; i <= 10; i++)
+                if (users.TryAdd(userID, 1)) // TryAdd() - מנסה להוסיף בתנאי שאין עוד תהליך שעושה זאת בו זמנית
                 {
-                    serialPort.WriteLine(i + "");
-                    await Task.Delay(500); // simulate some work being done...
+                    serialPort.WriteLine(String.Format("[SERVER]: <{0}> : JOINING CELLCOM ENTERPRISE...", userID));
+                    for (int i = 1; i <= 10; i++)
+                    {
+                        serialPort.WriteLine(i + "");
+                        await Task.Delay(500); // simulate some work being done...
+                    }
+                    serialPort.WriteLine(String.Format("[SERVER]: <{0}> : DONE", userID));
                 }
-                serialPort.WriteLine(String.Format("[SERVER]: <{0}> : DONE", userID));
+                else
+                {
+                    serialPort.WriteLine($"[SERVER]: *Error* | Unable to add user <{userID}>.");
+                }
             }
         }
 
-        private async Task InitiateCall(SerialPort serialPort, string userID, string command)
+        private async Task InitiateCall(SerialPort serialPort, string userID)
         {
             // method has to be async to allow for the delay in the while loop without blocking the main thread + 
             // allow user to close the call...
 
-            if (users.Contains(userID))
+            if (users.ContainsKey(userID))
             {
-                if (!calls.Contains(userID))
+                if (!calls.ContainsKey(userID))
                 {
-                    calls.Add(userID); // current user is in a call
-                    while (calls.Contains(userID))
+                    if (calls.TryAdd(userID, 1)) // TryAdd() - מנסה להוסיף בתנאי שאין עוד תהליך שעושה זאת בו זמנית
                     {
-                        serialPort.WriteLine(String.Format("[SERVER]: <{0}> : CELLCOM", userID));
-                        await Task.Delay(1000); // delay one second...
+                        while (calls.ContainsKey(userID)) // current user is in a call
+                        {
+                            serialPort.WriteLine(String.Format("[SERVER]: <{0}> : CELLCOM", userID));
+                            await Task.Delay(1000); // delay one second...
+                        }
+                    }
+                    else
+                    {
+                        serialPort.WriteLine($"[SERVER]: *Error* | Unable to start call with user <{userID}>.");
                     }
                 }
                 else
                 {
-                    serialPort.WriteLine($"[SERVER]: *Error* | user: <{userID}> is already in a call.");
+                    serialPort.WriteLine($"[SERVER]: *Error* | User: <{userID}> is already in a call.");
                 }
             }
             else
@@ -181,24 +194,45 @@ namespace Cellcom_Communication
             }
         }
 
-        private void CloseCall(SerialPort serialPort, string userID, string command)
+        private void CloseCall(SerialPort serialPort, string userID)
         {
-            if (users.Contains(userID))
+            if (users.ContainsKey(userID))
             {
-                if (calls.Contains(userID))
+                if (calls.ContainsKey(userID))
                 {
-                    serialPort.WriteLine(String.Format("[SERVER]: <{0}> : BYE.", userID));
-                    calls.Remove(userID); // close current call
+                    // close current call
+                    if (calls.TryRemove(userID, out _)) // Out _ = הפונקצייה מחייבת פלט כלשהו וזה דגל שאומר בעצם שהפלט סתמי ואינו חשוב
+                    {
+                        serialPort.WriteLine(String.Format("[SERVER]: <{0}> : BYE.", userID));
+                    }
+                    else
+                    {
+                        serialPort.WriteLine(String.Format("[SERVER]: *Error* | Unable to remove user <{0}> from a call.", userID));
+                    }
                 }
                 else
                 {
-                    serialPort.WriteLine($"[SERVER]: *Error* | user: <{userID}> is currently not in a call.");
+                    serialPort.WriteLine($"[SERVER]: *Error* | User: <{userID}> is currently not in a call.");
                 }
             }
             else
             {
                 serialPort.WriteLine("[SERVER]: *Error* | User must JOIN before stopping a call.");
             }
+        }
+
+        private void ExitCellcom(SerialPort serialPort, string userID)
+        {
+            if (users.TryRemove(userID, out _)) // Out _ = הפונקצייה מחייבת פלט כלשהו וזה דגל שאומר בעצם שהפלט סתמי ואינו חשוב
+            {
+                serialPort.WriteLine(String.Format("[SERVER]: User <{0}> has been removed.", userID));
+            }
+            else
+            {
+                serialPort.WriteLine(String.Format("[SERVER]: Error! unable to remove user <{0}>.", userID));
+            }
+            calls.TryRemove(userID, out _);
+            //serialPort.Close();
         }
 
         private void DisplayCommandsList(SerialPort serialPort)
