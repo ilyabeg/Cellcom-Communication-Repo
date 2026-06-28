@@ -150,7 +150,7 @@ namespace Cellcom_Communication
                     serialPort.WriteLine(i + "");
                     await Task.Delay(500); // simulate some work being done...
                 }
-                serialPort.WriteLine(String.Format("\r\n[SERVER]: <{0}> : DONE", userID));
+                serialPort.WriteLine(String.Format("[SERVER]: <{0}> : DONE", userID));
             }
         }
 

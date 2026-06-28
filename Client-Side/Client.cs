@@ -41,9 +41,19 @@ namespace Client_Side
             string command;
             bool _continue = true;
 
+            Console.WriteLine("Type QUIT to close the program...\n");
+
             while (_continue)
             {
                 command = Console.ReadLine();
+
+                if (command != null && command.ToLower() == "quit") 
+                { 
+                    // safe exit...
+                    serialPort.Close();
+                    return; 
+                }
+
                 serialPort.WriteLine(command);
             }
         }
@@ -55,7 +65,7 @@ namespace Client_Side
             try
             {
                 // read and display server response
-                string respone = serialPort.ReadTo("\r");
+                string respone = serialPort.ReadLine();
                 Console.WriteLine(respone);
             }
             catch (TimeoutException ex)
