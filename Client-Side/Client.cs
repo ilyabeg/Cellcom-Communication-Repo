@@ -38,44 +38,33 @@ namespace Client_Side
 
         private void InputClientCommands(SerialPort serialPort)
         {
-            serialPort.WriteLine("#"); // random input to trigger event handler of the listening port to display commands for user
             string command;
-
             bool _continue = true;
+
             while (_continue)
             {
                 command = Console.ReadLine();
-                serialPort.Write(command);
+                serialPort.WriteLine(command);
+            }
+        }
 
-                if (command == "EXIT") // if command is EXIT it is ok to send it first to close the listening port.
-                {
-                    try
-                    {
-                        serialPort.Close();
-                        Console.WriteLine($"Port {serialPort.PortName} successfuly closed.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error closing {serialPort.PortName}: {ex.Message}");
-                    }
-                    _continue = false;
-                }
+        private void ReadResponse(Object sender, SerialDataReceivedEventArgs e)
+        {
+            SerialPort serialPort = (SerialPort)sender;
 
-                try
-                {
-                    string response = serialPort.ReadLine();
-                    Console.WriteLine(response);
-                }
-                catch (TimeoutException)
-                {
-                    Console.WriteLine("Timeout Error. Please try again.");
-                    serialPort.DiscardInBuffer();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error: {ex.Message}");
-                    serialPort.DiscardInBuffer();
-                }
+            try
+            {
+                // read and display server response
+                string respone = serialPort.ReadTo("\r");
+                Console.WriteLine(respone);
+            }
+            catch (TimeoutException ex)
+            {
+                serialPort.DiscardInBuffer(); // clear the buffer to avoid reading the same message again if timed out...
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Read Error: {ex.Message}");
             }
         }
 
@@ -95,6 +84,9 @@ namespace Client_Side
                 // read/write timeouts in milliseconds:
                 availablePorts[i].ReadTimeout = 500;
                 availablePorts[i].WriteTimeout = 500;
+
+                // attach event handler to read server responses
+                availablePorts[i].DataReceived += ReadResponse;
             }
         }
 

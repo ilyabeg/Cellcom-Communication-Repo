@@ -88,7 +88,7 @@ namespace Cellcom_Communication
                 else
                 {
                     serialPort.WriteLine("[SERVER]: Invalid message format. Expected: '<userID> command'");
-                    DisplayCommandsList(serialPort);
+                    //DisplayCommandsList(serialPort);
                 }
             }
             catch (TimeoutException ex)
@@ -147,7 +147,7 @@ namespace Cellcom_Communication
                 serialPort.WriteLine(String.Format("[SERVER]: <{0}> : {1} : JOINING CELLCOM ENTERPRISE...", userID, command));
                 for (int i = 1; i <= 10; i++)
                 {
-                    serialPort.Write(i + " ");
+                    serialPort.WriteLine(i + "");
                     await Task.Delay(500); // simulate some work being done...
                 }
                 serialPort.WriteLine(String.Format("\r\n[SERVER]: <{0}> : DONE", userID));
