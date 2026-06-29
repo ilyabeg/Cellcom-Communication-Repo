@@ -15,28 +15,38 @@ namespace Cellcom_Communication
 
         public void DetermineCommand(SerialPort serialPort, string userID, string command)
         {
-            switch (command)
+            bool validMsg = false;
+            // seperate if statement for message command
+            if (command.StartsWith("MSG"))
             {
-                case "JOIN":
-                    JoinCellcom(serialPort, userID);
-                    break;
+                // determine the msg of the user
+                validMsg = Message(serialPort, userID, command);
+            }
+            else if (!validMsg)
+            {
+                switch (command)
+                {
+                    case "JOIN":
+                        JoinCellcom(serialPort, userID);
+                        break;
 
-                case "NEW":
-                    InitiateCall(serialPort, userID);
-                    break;
+                    case "NEW":
+                        InitiateCall(serialPort, userID);
+                        break;
 
-                case "STOP":
-                    CloseCall(serialPort, userID);
-                    break;
+                    case "STOP":
+                        CloseCall(serialPort, userID);
+                        break;
 
-                case "EXIT":
-                    // safe exit
-                    ExitCellcom(serialPort, userID);
-                    break;
+                    case "EXIT":
+                        // safe exit
+                        ExitCellcom(serialPort, userID);
+                        break;
 
-                default:
-                    serialPort.WriteLine(String.Format("[SERVER]: <{0}> : '{1}' | Command not found.", userID, command));
-                    break;
+                    default:
+                        serialPort.WriteLine(String.Format("[SERVER]: <{0}> : '{1}' | Command not found.", userID, command));
+                        break;
+                }
             }
         }
 
@@ -144,15 +154,58 @@ namespace Cellcom_Communication
             //serialPort.Close();
         }
 
+        private bool Message(SerialPort serialPort, string userID, string command)
+        {
+            if (users.ContainsKey(userID))
+            {
+                int start = 4; // message allways starts at index 4 (has to be space, otherwise the command can't be recognized)
+                string msg;
+
+                try
+                {
+                    msg = command.Substring(start);
+                }
+                catch (Exception) 
+                {
+                    return false; // invalid!
+                }
+
+                if (msg == "")
+                    return false; // invalid!
+
+                try
+                {   // remove last 3 characters (which are: 'space', 'com port number' that has to be 2 numbers)
+                    msg = msg.Remove(msg.Length - 3);
+                }
+                catch (Exception)
+                {
+                    return false; // invalid!
+                }
+
+                if (msg == "" || msg.IsWhiteSpace())
+                    return false; // invalid!
+
+                // valid message >> print it out without interruptions
+                foreach (char letter in msg)
+                {
+                    serialPort.WriteLine(letter + "");
+                    Thread.Sleep(500);
+                }
+                return true; // valid! no need for switch/case
+            }
+            serialPort.WriteLine("[SERVER]: *Error* | User must JOIN before sending a message.");
+            return false;
+        }
+
         private void DisplayCommandsList(SerialPort serialPort)
         {
             // custom commands list
             serialPort.WriteLine(
                 "\nList of all commands:" +
-                "\r\n\t* <'user.id'> JOIN -> join our network" +
-                "\r\n\t* <'user.id'> NEW  -> open a new call in our network (must join first)" +
-                "\r\n\t* <'user.id'> STOP -> stop an ongoing call (call must be open)" +
-                "\r\n\t* <'user.id'> EXIT -> exit the terminal" +
+                "\r\n\t- <'user.id'> JOIN -> join our network" +
+                "\r\n\t- <'user.id'> NEW  -> open a new call in our network (must join first)" +
+                "\r\n\t- <'user.id'> STOP -> stop an ongoing call (call must be open)" +
+                "\r\n\t- <'user.id'> EXIT -> exit the terminal" +
                 "\r\n\r\nawaiting user input ...\r\n");
         }
     }

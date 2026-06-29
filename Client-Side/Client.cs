@@ -164,7 +164,7 @@ namespace Client_Side
                         port.Open();
                         port.Close();
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         continue;
                     }
