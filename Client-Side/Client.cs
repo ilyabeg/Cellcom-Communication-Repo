@@ -13,7 +13,8 @@ namespace Client_Side
         {
             InitPorts();
 
-            Console.WriteLine("Select COM port (e.g. COM10, COM11, ... , COM19) >>");
+            Console.WriteLine("Select COM port >>");
+            DisplayAvailablePorts();
             string input = Console.ReadLine().Trim().ToUpper();
 
             if (!isValid(input))
@@ -29,7 +30,12 @@ namespace Client_Side
             SerialPort openPort = OpenPort(input);
             if (openPort == null)
             {
-                Console.WriteLine("Couldn't find/open port. Exiting program...");
+                Console.WriteLine("Couldn't find/open port. Exiting program in 5 seconds...");
+                for (int i = 5; i >= 1; i--)
+                {
+                    Console.Write(i + " ");
+                    Thread.Sleep(1000);
+                }
                 return;
             }
 
@@ -39,19 +45,18 @@ namespace Client_Side
         private void InputClientCommands(SerialPort serialPort)
         {
             string command;
-            bool _continue = true;
 
             Console.WriteLine("Type QUIT to close the program...\n");
 
-            while (_continue)
+            while (true)
             {
                 command = Console.ReadLine();
 
-                if (command != null && command.ToLower() == "quit") 
-                { 
+                if (command != null && command.ToLower() == "quit")
+                {
                     // safe exit...
                     serialPort.Close();
-                    return; 
+                    return;
                 }
 
                 serialPort.WriteLine(command);
@@ -130,7 +135,7 @@ namespace Client_Side
                 int startIndex = 3;
                 int numOfPort;
 
-                try 
+                try
                 {
                     numOfPort = int.Parse(input.Substring(startIndex).Trim());
                 }
@@ -145,6 +150,27 @@ namespace Client_Side
                 }
             }
             return false;
+        }
+
+        private void DisplayAvailablePorts()
+        {
+            Console.WriteLine("Available COM ports: ");
+            foreach (SerialPort port in availablePorts)
+            {
+                if (!port.IsOpen)
+                {
+                    try
+                    {
+                        port.Open();
+                        port.Close();
+                    }
+                    catch (Exception e)
+                    {
+                        continue;
+                    }
+                    Console.WriteLine("\t- " + port.PortName);
+                }
+            }
         }
     }
 }
