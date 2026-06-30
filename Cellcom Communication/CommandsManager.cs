@@ -187,15 +187,6 @@ namespace Cellcom_Communication
                 if (msg == "")
                     return false; // invalid!
 
-                try
-                {   // remove last 3 characters (which are: 'space', 'com port number' that has to be 2 numbers)
-                    msg = msg.Remove(msg.Length - 3);
-                }
-                catch (Exception)
-                {
-                    return false; // invalid!
-                }
-
                 if (msg == "" || msg.IsWhiteSpace())
                     return false; // invalid!
 
@@ -225,17 +216,5 @@ namespace Cellcom_Communication
             serialPort.WriteLine("[SERVER]: *Error* | User must JOIN before sending a message.");
             return false;
         }
-
-        //private void DisplayCommandsList(SerialPort serialPort)
-        //{
-        //    // custom commands list
-        //    serialPort.WriteLine(
-        //        "\nList of all commands:" +
-        //        "\r\n\t- <'user.id'> JOIN -> join our network" +
-        //        "\r\n\t- <'user.id'> NEW  -> open a new call in our network (must join first)" +
-        //        "\r\n\t- <'user.id'> STOP -> stop an ongoing call (call must be open)" +
-        //        "\r\n\t- <'user.id'> EXIT -> exit the terminal" +
-        //        "\r\n\r\nawaiting user input ...\r\n");
-        //}
     }
 }

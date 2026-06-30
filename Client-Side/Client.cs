@@ -15,51 +15,52 @@ namespace Client_Side
 
             Console.WriteLine("Select COM port >>");
             DisplayAvailablePorts();
-            string input = Console.ReadLine().Trim().ToUpper();
 
-            if (!isValid(input))
-            {
-                do
-                {
-                    Console.WriteLine("Invalid input. Please enter a valid COM port (e.g. COM10, COM11, ... , COM19) >>");
-                    input = Console.ReadLine().Trim().ToUpper();
-                }
-                while (!isValid(input));
-            }
-
-            SerialPort openPort = OpenPort(input);
-            if (openPort == null)
-            {
-                Console.WriteLine("Couldn't find/open port. Exiting program in 5 seconds...");
-                for (int i = 5; i >= 1; i--)
-                {
-                    Console.Write(i + " ");
-                    Thread.Sleep(1000);
-                }
-                return;
-            }
-
-            InputClientCommands(openPort);
+            InputClientCommands();
         }
 
-        private void InputClientCommands(SerialPort serialPort)
+        private void InputClientCommands()
         {
-            string command;
-
             Console.WriteLine("Type QUIT to close the program...\n");
 
             while (true)
             {
-                command = Console.ReadLine();
+                string input = Console.ReadLine().Trim();
 
-                if (command != null && command.ToLower() == "quit")
+                if (input != null && input.ToLower() == "quit")
                 {
                     // safe exit...
-                    serialPort.Close();
+                    CloseAllOpenPorts();
                     return;
                 }
 
-                serialPort.WriteLine(command);
+                // get port number from input (last 2 characters)
+                int portNumber = 0;
+                try
+                {
+                    portNumber = int.Parse(input.Substring(input.Length - 2)); // pull port num from input
+                    input = input.Remove(input.Length - 2); // remove port number from the input
+                }
+                catch (Exception) 
+                {
+                    Console.WriteLine("Invalid input, expected 'command + port number'...");
+                    continue;
+                }
+
+                // open chosen port
+                SerialPort openPort = OpenPort("COM" + portNumber);
+                if (openPort == null)
+                {
+                    Console.WriteLine("Couldn't find/open port. Exiting program in 5 seconds...");
+                    for (int i = 5; i >= 1; i--)
+                    {
+                        Console.Write(i + " ");
+                        Thread.Sleep(1000);
+                    }
+                    return;
+                }
+
+                openPort.WriteLine(input);
             }
         }
 
@@ -111,45 +112,34 @@ namespace Client_Side
             {
                 if (availablePorts[i].PortName == portName)
                 {
+                    // port is already open...
+                    if (availablePorts[i].IsOpen)
+                        return availablePorts[i];
+
                     try
                     {
                         availablePorts[i].Open();
                         Console.WriteLine($"Port {portName} opened successfully.");
                         return availablePorts[i];
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine($"*Critical Error* opening {portName} failed: {e.Message}");
-                    }
+                    catch (Exception)
+                    { }
                 }
             }
             return null; // return null if the port was not found or could not be opened
         }
 
-        private bool isValid(string input)
+        private void CloseAllOpenPorts()
         {
-            if (input == null || input.IsWhiteSpace()) return false;
-
-            if (input.StartsWith("COM") || input.StartsWith("com"))
+            for (int i = 0; i <= 9; i++)
             {
-                int startIndex = 3;
-                int numOfPort;
-
-                try
-                {
-                    numOfPort = int.Parse(input.Substring(startIndex).Trim());
+                try {
+                    availablePorts[i].Close();
                 }
-                catch (Exception e)
-                {
-                    return false;
-                }
-
-                if (numOfPort >= 10 && numOfPort <= 19)
-                {
-                    return true;
+                catch (Exception) {
+                    continue;
                 }
             }
-            return false;
         }
 
         private void DisplayAvailablePorts()
