@@ -226,16 +226,16 @@ namespace Cellcom_Communication
             return false;
         }
 
-        private void DisplayCommandsList(SerialPort serialPort)
-        {
-            // custom commands list
-            serialPort.WriteLine(
-                "\nList of all commands:" +
-                "\r\n\t- <'user.id'> JOIN -> join our network" +
-                "\r\n\t- <'user.id'> NEW  -> open a new call in our network (must join first)" +
-                "\r\n\t- <'user.id'> STOP -> stop an ongoing call (call must be open)" +
-                "\r\n\t- <'user.id'> EXIT -> exit the terminal" +
-                "\r\n\r\nawaiting user input ...\r\n");
-        }
+        //private void DisplayCommandsList(SerialPort serialPort)
+        //{
+        //    // custom commands list
+        //    serialPort.WriteLine(
+        //        "\nList of all commands:" +
+        //        "\r\n\t- <'user.id'> JOIN -> join our network" +
+        //        "\r\n\t- <'user.id'> NEW  -> open a new call in our network (must join first)" +
+        //        "\r\n\t- <'user.id'> STOP -> stop an ongoing call (call must be open)" +
+        //        "\r\n\t- <'user.id'> EXIT -> exit the terminal" +
+        //        "\r\n\r\nawaiting user input ...\r\n");
+        //}
     }
 }

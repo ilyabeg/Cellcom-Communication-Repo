@@ -73,7 +73,7 @@ namespace Client_Side
                 string respone = serialPort.ReadLine();
                 Console.WriteLine(respone);
             }
-            catch (TimeoutException ex)
+            catch (TimeoutException)
             {
                 serialPort.DiscardInBuffer(); // clear the buffer to avoid reading the same message again if timed out...
             }
