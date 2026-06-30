@@ -52,11 +52,11 @@ namespace Client_Side
             {
                 command = Console.ReadLine();
 
-                if (command != null && command.ToLower() == "quit") 
-                { 
+                if (command != null && command.ToLower() == "quit")
+                {
                     // safe exit...
                     serialPort.Close();
-                    return; 
+                    return;
                 }
 
                 serialPort.WriteLine(command);
@@ -73,7 +73,7 @@ namespace Client_Side
                 string respone = serialPort.ReadLine();
                 Console.WriteLine(respone);
             }
-            catch (TimeoutException ex)
+            catch (TimeoutException)
             {
                 serialPort.DiscardInBuffer(); // clear the buffer to avoid reading the same message again if timed out...
             }
@@ -135,7 +135,7 @@ namespace Client_Side
                 int startIndex = 3;
                 int numOfPort;
 
-                try 
+                try
                 {
                     numOfPort = int.Parse(input.Substring(startIndex).Trim());
                 }
@@ -164,7 +164,7 @@ namespace Client_Side
                         port.Open();
                         port.Close();
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         continue;
                     }
