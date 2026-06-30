@@ -9,7 +9,7 @@ namespace Cellcom_Communication
     internal class Server // Server class for handling all logic
     {
         private static SerialPort[] ports = new SerialPort[10]; // 10 global serial ports
-        private static CommandsManager commandsManager = new CommandsManager(); // command manager object
+        private CommandsManager commandsManager = new CommandsManager(); // command manager object
 
         public void InitServer()
         {

@@ -165,7 +165,7 @@ namespace Cellcom_Communication
                 {
                     msg = command.Substring(start);
                 }
-                catch (Exception) 
+                catch (Exception)
                 {
                     return false; // invalid!
                 }
@@ -186,11 +186,16 @@ namespace Cellcom_Communication
                     return false; // invalid!
 
                 // valid message >> print it out without interruptions
-                foreach (char letter in msg)
+                Task printMsg = Task.Run( () => 
                 {
-                    serialPort.WriteLine(letter + "");
-                    Thread.Sleep(500);
-                }
+                    foreach (char letter in msg)
+                    {
+                        serialPort.WriteLine(letter + "");
+                        Thread.Sleep(500);
+                    }
+                });
+                printMsg.Wait(); // wait for task to finish, then keep program going
+
                 return true; // valid! no need for switch/case
             }
             serialPort.WriteLine("[SERVER]: *Error* | User must JOIN before sending a message.");
