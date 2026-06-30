@@ -53,17 +53,19 @@ namespace Cellcom_Communication
         private async Task JoinCellcom(SerialPort serialPort, string userID)
         {
             // using await for 10 second timer
-            if (users.ContainsKey(userID))
-            {
-                serialPort.WriteLine($"[SERVER]: <{userID}> already joined.");
-            }
-            else if (users.Count >= 10)
+
+            //if (users.ContainsKey(userID))
+            //{
+            //    serialPort.WriteLine($"[SERVER]: *Error* | User already joined.");
+            //} else
+
+            if (users.Count >= 10)
             {
                 serialPort.WriteLine("[SERVER]: *Error* | Maximum capacity of users reached.");
             }
             else
-            {
-                if (users.TryAdd(userID, 1)) // TryAdd() - מנסה להוסיף בתנאי שאין עוד תהליך שעושה זאת בו זמנית
+            {   // if user already joined, it's ok to run command again
+                if (users.ContainsKey(userID) || users.TryAdd(userID, 1)) // TryAdd() - מנסה להוסיף בתנאי שאין עוד תהליך שעושה זאת בו זמנית
                 {
                     serialPort.WriteLine(String.Format("[SERVER]: <{0}> : JOINING CELLCOM ENTERPRISE...", userID));
                     for (int i = 1; i <= 10; i++)
