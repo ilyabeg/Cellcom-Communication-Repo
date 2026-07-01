@@ -13,13 +13,12 @@ namespace Cellcom_Communication
         // שינוי הרשימות למבנה נתונים שתומך במערכת multi-thread...
         // int value in the dictionaries is junk
 
-        // new Task Completion Source object for 'freezing' other commands if MSG command is running
-        private TaskCompletionSource _msgTask;
-        // note: all members of TaskCompletionSource<TResult> are thread-safe and may be used from multiple threads concurrently
+        // new change!!!: Concurrent dictionary for user messages
+        private static ConcurrentDictionary<string, TaskCompletionSource> activeMessages = new ConcurrentDictionary<string, TaskCompletionSource>();
 
-        // !!!changed bool flag to concurrent bool!!!
-        private ThreadLocal<bool> _msgRunning = new ThreadLocal<bool>(() => false);
-        // note: all public and protected members of ThreadLocal<T> are thread-safe and may be used concurrently from multiple thread
+        // הודעה חשובה: יוצרים מילון שמקשר בין המשתמש להודעה שלו כיוון שכל המשתמשים ניגשים לשרת בכדי לשלוח הודעה
+        // אך כשזה קורה, אם משתמש א' ישלח משהו בזמן שמשתמש ב' נמצא בשיחה למשל, השיחה של משתמש ב' תיעצר עד 
+        // שהההודעה של משתמש א' לא תסיים להישלח. כדי למנוע את זה צריך "להקפיא" רק את הצד של מי ששלח ולכן השימוש במילון
 
         public void DetermineCommand(SerialPort serialPort, string userID, string command)
         {
@@ -78,9 +77,9 @@ namespace Cellcom_Communication
                     serialPort.WriteLine(String.Format("[SERVER]: <{0}> : JOINING CELLCOM ENTERPRISE...", userID));
                     for (int i = 1; i <= 10; i++)
                     {
-                        // if MSG command running -> freeze join timer, and wait for msg to finish.
-                        if (_msgRunning.Value)
-                            await _msgTask.Task;
+                        // if MSG command running for current user -> freeze join timer, and wait for msg to finish.
+                        if (activeMessages.TryGetValue(userID, out TaskCompletionSource msgTask))
+                            await msgTask.Task;
 
                         serialPort.WriteLine(i + "");
                         await Task.Delay(500); // simulate some work being done...
@@ -107,9 +106,9 @@ namespace Cellcom_Communication
                     {
                         while (calls.ContainsKey(userID)) // current user is in a call
                         {
-                            // if MSG command running -> freeze join timer, and wait for msg to finish.
-                            if (_msgRunning.Value)
-                                await _msgTask.Task;
+                            // if MSG command running for current user -> freeze join timer, and wait for msg to finish.
+                            if (activeMessages.TryGetValue(userID, out TaskCompletionSource msgTask))
+                                await msgTask.Task;
 
                             serialPort.WriteLine(String.Format("[SERVER]: <{0}> : CELLCOM", userID));
                             await Task.Delay(1000); // delay one second...
@@ -176,6 +175,13 @@ namespace Cellcom_Communication
         {
             if (users.ContainsKey(userID))
             {
+                // user already sent message...
+                if (activeMessages.ContainsKey(userID))
+                {
+                    serialPort.WriteLine($"[SERVER]: *Error* | User: <{userID}> already has an active message.");
+                    return true;
+                }
+
                 int start = 4; // message allways starts at index 4 (has to be space, otherwise the command can't be recognized)
                 string msg;
 
@@ -195,24 +201,19 @@ namespace Cellcom_Communication
                     return false; // invalid!
 
                 // valid message >> print it out without interruptions
+                TaskCompletionSource tempTask = new TaskCompletionSource();
+                activeMessages.TryAdd(userID, tempTask);
+
                 Task.Run(async () => 
                 {
-                    _msgTask = new TaskCompletionSource(); // create new Completion Source task
-
-                    // הודעה חשובה: יוצרים משימה חדשה בכל פעם שמריצים את פקודת ההודעה כדי ששאר הפעולות יזהו
-                    // שזו משימה שעוד לא התבצעה. בגלל שבכל פעם שזה מסתיים שאר הפעולות רואות שהמשימה מתה ולכן 
-                    // הן יבצעו את הקוד בו זמנית - מה שלא טוב לנו, כי אנחנו רוצים להקפיא אותן כל עוד ההודעה לא סיימה
-
-                    _msgRunning.Value = true;
-
                     foreach (char letter in msg)
                     {
                         serialPort.WriteLine(letter + "");
                         await Task.Delay(500);
                     }
 
-                    _msgTask.TrySetResult();
-                    _msgRunning.Value = false;
+                    tempTask.TrySetResult();
+                    activeMessages.TryRemove(userID, out _);
                 });
 
                 return true; // valid! no need for switch/case
