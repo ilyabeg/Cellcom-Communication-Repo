@@ -13,7 +13,7 @@ namespace Client_Side
         {
             InitPorts();
 
-            Console.WriteLine("Select COM port >>");
+            Console.WriteLine("Please enter a command (Example: <'userID'> 'command' 'port number') >>");
             DisplayAvailablePorts();
 
             InputClientCommands();
@@ -43,7 +43,7 @@ namespace Client_Side
                 }
                 catch (Exception) 
                 {
-                    Console.WriteLine("Invalid input, expected 'command + port number'...");
+                    Console.WriteLine("Invalid input, expected: <'userID'> 'command + port number'...");
                     continue;
                 }
 
