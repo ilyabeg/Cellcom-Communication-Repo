@@ -182,12 +182,13 @@ namespace Cellcom_Communication
                     return true;
                 }
 
-                int start = 4; // message allways starts at index 4 (has to be space, otherwise the command can't be recognized)
+                // fixed!: start index is now at 3
+                int start = 3; // message allways starts at index 3
                 string msg;
 
                 try
                 {
-                    msg = command.Substring(start);
+                    msg = command.Substring(start).Trim(); // trim spaces if any exist
                 }
                 catch (Exception)
                 {
